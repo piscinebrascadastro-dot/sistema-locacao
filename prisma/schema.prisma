@@ -1,0 +1,131 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+enum Block {
+  PACIFICO
+  MAR_VERMELHO
+  ATLANTICO
+}
+
+enum ResponsibleType {
+  OWNER
+  ADMIN_OR_PROXY
+}
+
+enum GuestDocType {
+  CPF
+  RG
+  PASSPORT
+}
+
+enum GarageSide {
+  ATLANTICO
+  PACIFICO_MAR_VERMELHO
+}
+
+enum GarageLevel {
+  S1
+  S2
+  S3
+}
+
+enum ValidationStatus {
+  PENDENTE
+  VALIDADO
+  RECUSADO
+  FALTA_DOC
+  FALTA_FOTO
+  OUTRO
+}
+
+model UnitProfile {
+  id               String          @id @default(cuid())
+  unit             String
+  block            Block
+  responsibleType  ResponsibleType
+
+  name             String
+  rg               String
+  cpf              String
+  email            String
+  phone            String
+
+  authorizationFileUrl String?
+
+  unitCode         String          @unique
+  accessCodeHash   String
+
+  createdAt        DateTime        @default(now())
+  updatedAt        DateTime        @updatedAt
+
+  bookings         Booking[]
+
+  @@unique([unit, block], name: "unit_block")
+}
+
+model Booking {
+  id                String   @id @default(cuid())
+  unitId            String
+  unit              UnitProfile @relation(fields: [unitId], references: [id], onDelete: Cascade)
+
+  checkIn           DateTime
+  checkOut          DateTime
+
+  // Dados da locação (curta temporada)
+  // Plataforma/app utilizado (ex.: Airbnb, Booking, etc.)
+  platform          String   @default("")
+  // Quantidade total de hóspedes informada no cadastro
+  guestsCount       Int      @default(0)
+  // Observações gerais da locação (opcional)
+  notes             String   @default("")
+
+  rentalProofFileUrl String
+
+  hasGarage         Boolean
+  garageIsRented    Boolean
+  garageRentedFromUnit String?
+  garageContractFileUrl String?
+
+  garageSide        GarageSide?
+  garageTower       Block?
+  garageLevel       GarageLevel?
+  garageNumber      String?
+
+  validationStatus  ValidationStatus @default(PENDENTE)
+  validationNote    String?
+  validatedAt       DateTime?
+  validatedBy       String?
+
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  guests            Guest[]
+}
+
+model Guest {
+  id          String      @id @default(cuid())
+  bookingId   String
+  booking     Booking     @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+
+  name        String
+  email       String
+  phone       String
+
+  docType     GuestDocType
+  docNumber   String
+  docFileUrl  String?
+
+  // Validação individual do hóspede (ADM)
+  validationStatus  ValidationStatus @default(PENDENTE)
+  validationNote    String?
+  validatedAt       DateTime?
+  validatedBy       String?
+
+  createdAt   DateTime @default(now())
+}
